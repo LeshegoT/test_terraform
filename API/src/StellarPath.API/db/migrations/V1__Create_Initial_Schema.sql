@@ -3,7 +3,6 @@ CREATE TABLE roles (
     role_name VARCHAR(50) NOT NULL
 );
 
-
 CREATE TABLE users (
     google_id VARCHAR(100) PRIMARY KEY,
     email VARCHAR(256) NOT NULL,
