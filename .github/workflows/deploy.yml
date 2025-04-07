@@ -33,23 +33,11 @@ jobs:
         id: tf-outputs
         with:
           path: terraform
-      
-      - name: Debug Terraform Outputs
-        run: |
-          echo "DB Endpoint: ${{ steps.tf-outputs.outputs.rds_endpoint }}"
-          echo "DB Address: ${{ steps.tf-outputs.outputs.rds_address }}"
-          echo "DB Port: ${{ steps.tf-outputs.outputs.rds_port }}"
-    
+          
       - name: Install PostgreSQL Client
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-
-      - name: Create Database (if not exists)
-        run: |
-          psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='stellarpath_db'" | grep -q 1 || psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "CREATE DATABASE stellarpath_db;"
-        env:
-          PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           
       - name: Run Flyway validate and migrate
         uses: joshuaavalon/flyway-action@v3.0.0
