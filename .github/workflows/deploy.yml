@@ -39,11 +39,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
       - name: Create "stellarpath" database if it doesn't exist
-        run: |
-          psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='stellarpath'" | grep -q 1 || psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "CREATE DATABASE stellarpath;"
+        run: psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='stellarpath'" | grep -q 1 || psql -h "${{ steps.tf-outputs.outputs.rds_address }}" -p "${{ steps.tf-outputs.outputs.rds_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "CREATE DATABASE stellarpath;"
         env:
           PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-
+          
       - name: Run Flyway validate and migrate
         uses: joshuaavalon/flyway-action@v3.0.0
         with:
