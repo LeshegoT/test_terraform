@@ -45,7 +45,6 @@ jobs:
           url: jdbc:postgresql://${{ steps.tf-outputs.outputs.rds_endpoint }}/stellarpath_db
           user: ${{ secrets.DATABASE_USERNAME }}
           password: ${{ secrets.DATABASE_PASSWORD }}
-          command: migrate
           locations: filesystem:./migrations
         env:
           FLYWAY_VALIDATE_MIGRATION_NAMING: true
