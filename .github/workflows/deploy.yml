@@ -1,71 +1,55 @@
-name: Deploy Infrastructure
+name: Flyway Migrate
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
-
-permissions:
-  id-token: write
-  contents: read
+    paths:
+      - 'API/src/StellarPath.API/db/migrations/**'
 
 jobs:
-  deploy:
-    name: Deploy to AWS
+  migrate:
+    name: Run Flyway Migrations
     runs-on: ubuntu-latest
-    
+    environment: production
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
-          aws-region: ${{ vars.AWS_REGION || 'af-south-1' }}
+          aws-region: af-south-1
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Get Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
         with:
-          terraform_version: "1.7.0"
+          path: terraform
 
-      - name: Terraform Init
-        run: terraform init
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-        env:
-          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
-          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-
-      - name: Build and push Docker image
+      - name: Install PostgreSQL Client
         run: |
-          # Set up Docker Buildx
-          docker buildx create --use
-          
-          # Get the ECR repository URL from terraform output
-          ECR_REPOSITORY=$(terraform output -raw ecr_repository_url)
-          
-          # Login to ECR
-          aws ecr get-login-password --region ${{ vars.AWS_REGION || 'af-south-1' }} | docker login --username AWS --password-stdin $ECR_REPOSITORY
-          
-          # Build and push Docker image
-          docker buildx build --platform linux/amd64 -t $ECR_REPOSITORY:latest -t $ECR_REPOSITORY:${{ github.sha }} --push .
-        
-      - name: Deploy to ECS
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Create "stellarpath" database if it doesn't exist
         run: |
-          # Force new deployment of ECS service
-          aws ecs update-service --cluster $(terraform output -raw ecs_cluster_name) --service $(terraform output -raw ecs_service_name) --force-new-deployment
+          if ! psql -h "${{ steps.tf-outputs.outputs.db_endpoint }}" -p "${{ steps.tf-outputs.outputs.db_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='stellarpath'" | grep -q 1; then
+            psql -h "${{ steps.tf-outputs.outputs.db_endpoint }}" -p "${{ steps.tf-outputs.outputs.db_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "CREATE DATABASE stellarpath;"
+          fi
+        env:
+          PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      - name: Run Flyway validate and migrate
+        uses: joshuaavalon/flyway-action@v3.0.0
+        with:
+          url: jdbc:postgresql://${{ steps.tf-outputs.outputs.db_endpoint }}/stellarpath
+          user: ${{ secrets.DATABASE_USERNAME }}
+          password: ${{ secrets.DATABASE_PASSWORD }}
+          command: migrate
+          locations: filesystem:./migrations
+        env:
+          FLYWAY_VALIDATE_MIGRATION_NAMING: true
+          working-directory: API/src/StellarPath.API/db
