@@ -33,7 +33,12 @@ jobs:
         id: tf-outputs
         with:
           path: terraform
-
+      
+      - name: Debug Terraform Outputs
+        run: |
+          echo "DB Endpoint: ${{ steps.tf-outputs.outputs.db_endpoint }}"
+          echo "DB Port: ${{ steps.tf-outputs.outputs.db_port }}"
+    
       - name: Install PostgreSQL Client
         run: |
           sudo apt-get update
