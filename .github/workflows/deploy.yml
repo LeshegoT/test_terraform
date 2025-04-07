@@ -37,6 +37,7 @@ jobs:
       - name: Debug Terraform Outputs
         run: |
           echo "DB Endpoint: ${{ steps.tf-outputs.outputs.rds_endpoint }}"
+          echo "DB Address: ${{ steps.tf-outputs.outputs.rds_address }}"
           echo "DB Port: ${{ steps.tf-outputs.outputs.rds_port }}"
     
       - name: Install PostgreSQL Client
