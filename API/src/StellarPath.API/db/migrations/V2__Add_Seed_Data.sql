@@ -2,6 +2,7 @@ INSERT INTO roles (role_name) VALUES
 ('Admin'),
 ('User');
 
+
 INSERT INTO cruise_statuses (status_name) VALUES
 ('Scheduled'),
 ('In Progress'),
