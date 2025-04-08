@@ -33,6 +33,13 @@ jobs:
         id: tf-outputs
         with:
           path: terraform
+
+      - name: Print Terraform Outputs
+        run: |
+          echo "RDS Endpoint: ${{ steps.tf-outputs.outputs.rds_endpoint }}"
+          echo "ecr_repository_url: ${{ steps.tf-outputs.outputs.ecr_repository_url }}"
+          echo "ecs_cluster_name: ${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          echo "ecs_service_name: ${{ steps.tf-outputs.outputs.ecs_service_name }}"
           
       - name: Install PostgreSQL Client
         run: |
