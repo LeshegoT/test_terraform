@@ -13,7 +13,6 @@ CREATE TABLE users (
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );
 
-
 CREATE TABLE galaxies (
     galaxy_id SERIAL PRIMARY KEY,
     galaxy_name VARCHAR(100) NOT NULL,
