@@ -8,12 +8,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'API/src/StellarPath.API/**'
+
+env:
+  WORKING_DIRECTORY: API/src/StellarPath.API
+  AWS_REGION: af-south-1
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      WORKING_DIRECTORY: API/src/StellarPath.API
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,7 +42,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    environment: Production 
+    environment: Production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -52,27 +56,34 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
-          aws-region: af-south-1 
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get Terraform Outputs
+      - name: Setup and initialize Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Extract Terraform Outputs
         uses: dflook/terraform-output@v1
         id: tf-outputs
         with:
           path: terraform
 
-      - name: 🧱 Publish Docker Image to Amazon ECR
+      - name: Publish Docker Image to Amazon ECR
         run: |
           REPOSITORY_URI=${{ steps.tf-outputs.outputs.ecr_repository_url }}
           IMAGE_TAG=latest
 
           docker build -t $REPOSITORY_URI:$IMAGE_TAG -f docker/Dockerfile .
-          aws ecr get-login-password --region af-south-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
           docker push $REPOSITORY_URI:$IMAGE_TAG
 
   deploy:
     needs: publish
     runs-on: ubuntu-latest
-    environment: Production 
+    environment: Production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -81,48 +92,49 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
-          aws-region: af-south-1 
-
-      # Add this step to get Terraform outputs in the deploy job
-      - name: Get Terraform Outputs
-        uses: dflook/terraform-output@v1
-        id: tf-outputs
-        with:
-          path: terraform
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ">= 1.0"
 
-      - name: Initialize Terraform
+      - name: Terraform Init
         run: terraform init
         working-directory: terraform
 
-      - name: Plan Terraform
+      - name: Extract Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
+
+      - name: Terraform Plan (Check for Changes)
         id: tf-plan
-        run: terraform plan -out=terraform.tfplan -no-color \
-          -var="app_name=${{ github.event.repository.name }}" \
-          -var="db_name=${{ secrets.DB_NAME }}" \
-          -var="db_username=${{ secrets.DB_USERNAME }}" \
-          -var="db_password=${{ secrets.DB_PASSWORD }}" \
-          -var="ecr_repository_url=${{ steps.tf-outputs.outputs.ecr_repository_url }}" \
-          -var="rds_endpoint=${{ steps.tf-outputs.outputs.rds_endpoint }}"
+        run: |
+          terraform plan -detailed-exitcode -out=tfplan || echo "TF_PLAN_EXIT=$?" >> $GITHUB_ENV
         working-directory: terraform
         continue-on-error: true
 
-      - name: Show Terraform Plan
-        if: steps.tf-plan.outcome == 'success'
-        run: echo "Terraform Plan Created Successfully"
-
-      - name: Apply Terraform
-        if: steps.tf-plan.outcome == 'success'
-        run: terraform apply terraform.tfplan
+      - name: Apply Terraform (If Changes)
+        if: env.TF_PLAN_EXIT == '2'
+        run: terraform apply -auto-approve tfplan
         working-directory: terraform
 
-      - name: 🔄 Wait for ECS Service Stability
+      - name: No Infra Changes - Force ECS Redeploy
+        if: env.TF_PLAN_EXIT == '0'
+        run: |
+          echo "No Terraform changes detected. Forcing ECS service redeploy to pull latest image..."
+          aws ecs update-service \
+            --cluster "${{ github.event.repository.name }}-cluster" \
+            --service "${{ github.event.repository.name }}-service" \
+            --force-new-deployment
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+
+      - name: Wait for ECS Service Stability
         run: |
           aws ecs wait service-stable --cluster "${{ github.event.repository.name }}-cluster" \
             --service "${{ github.event.repository.name }}-service"
         env:
-          AWS_REGION: af-south-1
+          AWS_REGION: ${{ env.AWS_REGION }}
