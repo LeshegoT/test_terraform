@@ -28,7 +28,12 @@ jobs:
           role-to-assume: arn:aws:iam::574836245203:role/GitHubActionsOIDCRole
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: af-south-1
-
+      
+      - name: Verify AWS credentials
+        run: |
+                aws sts get-caller-identity
+                aws s3 ls s3://stellar-path-s3-bucket/ || echo "Cannot list bucket contents"
+                  
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
