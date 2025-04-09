@@ -1,4 +1,3 @@
-
 terraform {
   required_providers {
     aws = {
@@ -6,7 +5,15 @@ terraform {
       version = "~> 5.0"
     }
   }
+  
+  backend "s3" {
+    bucket  = "stellar-path-s3-bucket"
+    key     = "stellar-path-s3-bucket/terraform.tfstate"
+    region  = "af-south-1"
+    encrypt = true
+  }
 }
+
 
 #   backend "s3" {
 #     region  = "af-south-1"
