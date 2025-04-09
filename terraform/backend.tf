@@ -1,4 +1,4 @@
- State bucket
+# #State bucket
  terraform {
    backend "s3" {
      bucket  = "stellar-path-s3-bucket"

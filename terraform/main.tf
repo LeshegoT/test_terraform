@@ -1,18 +1,11 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-  
-  backend "s3" {
-    bucket  = "stellar-path-s3-bucket"
-    key     = "stellar-path-s3-bucket/terraform.tfstate"
-    region  = "af-south-1"
-    encrypt = true
-  }
-}
+# terraform {
+#   required_providers {
+#     aws = {
+#       source  = "hashicorp/aws"
+#       version = "~> 5.0"
+#     }
+#   }
+# }
 
 
 #   backend "s3" {
