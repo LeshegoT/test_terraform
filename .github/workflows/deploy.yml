@@ -29,6 +29,16 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: af-south-1
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: |
+              cd terraform
+              terraform init
+        env:
+          AWS_REGION: af-south-1
+
       - name: Get Terraform Outputs
         uses: dflook/terraform-output@v1
         id: tf-outputs
