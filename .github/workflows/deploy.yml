@@ -44,6 +44,11 @@ jobs:
         env:
           AWS_REGION: af-south-1
 
+      - name: Debug - Print Terraform State
+        run: |
+                  cd terraform
+                  cat terraform.tfstate
+
       - name: Get Terraform Outputs
         uses: dflook/terraform-output@v1
         id: tf-outputs
