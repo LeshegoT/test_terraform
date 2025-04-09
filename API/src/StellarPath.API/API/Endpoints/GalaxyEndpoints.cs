@@ -1,6 +1,7 @@
 ﻿using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 
+
 namespace API.Endpoints;
 public static class GalaxyEndpoints
 {
