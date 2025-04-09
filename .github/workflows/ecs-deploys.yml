@@ -1,0 +1,8 @@
+name: Terraform Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
