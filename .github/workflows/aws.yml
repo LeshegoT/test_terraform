@@ -14,6 +14,7 @@ on:
 env:
   WORKING_DIRECTORY: API/src/StellarPath.API
   AWS_REGION: af-south-1
+  AWS_ACCOUNT_ID: 574836245203
 
 jobs:
   build:
@@ -55,7 +56,7 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup and initialize Terraform
