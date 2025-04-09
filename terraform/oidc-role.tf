@@ -75,11 +75,12 @@ resource "aws_iam_policy" "ecs_task_s3_read_only" {
         Effect = "Allow",
         Action = [
           "s3:GetObject",
+          "s3:PutObject",
           "s3:ListBucket"
         ],
         Resource = [
-          "arn:aws:s3:::stellarpath-s3-bucket",
-          "arn:aws:s3:::stellarpath-s3-bucket/*"
+          "arn:aws:s3:::stellar-path-s3-bucket",
+          "arn:aws:s3:::stellar-path-s3-bucket/*"
         ]
       }
     ]
@@ -89,7 +90,7 @@ resource "aws_iam_policy" "ecs_task_s3_read_only" {
 resource "aws_iam_policy" "terraform_state_access" {
   name        = "TerraformStateAccess"
   description = "Allow full access to the Terraform state bucket"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -102,8 +103,8 @@ resource "aws_iam_policy" "terraform_state_access" {
           "s3:DeleteObject"
         ],
         Resource = [
-          "arn:aws:s3:::stellarpath-s3-bucket",
-          "arn:aws:s3:::stellarpath-s3-bucket/*"
+          "arn:aws:s3:::stellar-path-s3-bucket",
+          "arn:aws:s3:::stellar-path-s3-bucket/*"
         ]
       }
     ]
