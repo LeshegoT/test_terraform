@@ -16,33 +16,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
+      - name: Create zip file
+        run: |
+          cd app
+          zip -r ../app.zip .
+      
       - name: Assume the deploy pipeline user role
         uses: aws-actions/configure-aws-credentials@v4.0.1
         with:
           role-to-assume: arn:aws:iam::574836245203:role/GitHubActionsOIDCRole
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: af-south-1
-
-      - name: Copy environment config
-        run: aws s3 cp s3://30-seconds-game/.env .  # <-- Updated
-
-      - name: Create ZIP deployment package
-        run: zip -r node-app.zip ./
-
-      - name: Upload package to S3 bucket
-        run: aws s3 cp node-app.zip s3://30-seconds-game/  # <-- Updated
-
-      - name: Create new ElasticBeanstalk Application Version
+      
+      - name: Upload to S3
+        run: |
+          aws s3 cp app.zip s3://${{ secrets.AWS_S3_BUCKET }}/app-${{ github.sha }}.zip
+      
+      - name: Create Elastic Beanstalk application version
         run: |
           aws elasticbeanstalk create-application-version \
-          --application-name 30-seconds-game-app \  # <-- Updated
-          --source-bundle S3Bucket="30-seconds-game",S3Key="node-app.zip" \
-          --version-label "ver-${{ github.sha }}" \
-          --description "commit-sha-${{ github.sha }}"
-
-      - name: Deploy new ElasticBeanstalk Application Version
+            --application-name ${{ secrets.AWS_EB_APPLICATION_NAME }} \
+            --version-label "v-${{ github.sha }}" \
+            --source-bundle S3Bucket="${{ secrets.AWS_S3_BUCKET }}",S3Key="app-${{ github.sha }}.zip"
+      
+      - name: Deploy to Elastic Beanstalk
         run: |
           aws elasticbeanstalk update-environment \
-          --environment-name 30-seconds-game-env \ 
-          --version-label "ver-${{ github.sha }}"
+            --environment-name ${{ secrets.AWS_EB_ENVIRONMENT_NAME }} \
+            --version-label "v-${{ github.sha }}"
